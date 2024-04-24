@@ -86,3 +86,37 @@ for limit_range in "${!limit_ranges[@]}"; do
 done
 
 echo "Limit range deletion process completed."
+
+echo "Installing Red Hat OpenShift GitOps Operator..."
+
+# Create namespace for GitOps if it doesn't already exist
+oc create ns openshift-gitops
+
+# Apply the Subscription to the cluster
+oc create -f manifests/gitops.yaml
+
+# Wait for the ClusterServiceVersion of the GitOps operator to be ready
+echo "Waiting for the Red Hat OpenShift GitOps operator to be ready..."
+oc wait -n openshift-gitops clusterserviceversion openshift-gitops-operator.v1.8.0 --for=condition=Ready --timeout=180s
+
+echo "Red Hat OpenShift GitOps Operator installation completed."
+
+echo "Verifying that all necessary GitOps components are operational..."
+
+# Loop until all pods are in the Running state
+while true; do
+    # Get the status of all pods in the specified namespace
+    PODS=$(oc get pods -n $NAMESPACE --field-selector=status.phase!=Running)
+    
+    # Check if any pods are not in the Running state
+    if [[ -z "$PODS" ]]; then
+        echo "All pods are in the Running state."
+        break
+    else
+        echo "Waiting for all pods to be in Running state..."
+        echo "$PODS"
+        sleep 10
+    fi
+done
+
+echo "GitOps components check completed."

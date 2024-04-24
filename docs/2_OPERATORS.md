@@ -54,63 +54,61 @@ To install the NVIDIA GPU operator, execute the following:
    oc get csv -n nvidia-gpu-operator --selector operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator -ojsonpath={.items[0].metadata.annotations.alm-examples} | jq .[] | oc apply -f -
    ```
 
-## Installing OpenDataHub Operator
+## Installing Red Hat OpenShift Data Science Operator
 
-OpenDataHub is a blueprint for building an AI and Machine Learning (ML) platform on top of OpenShift.
+Red Hat OpenShift Data Science provides a managed cloud service for data scientists and developers to build, develop, and deploy AI/ML models on OpenShift.
 
-To install the OpenDataHub operator, follow these instructions:
+To install the Red Hat OpenShift Data Science operator, follow these instructions:
 
-1. Create the namespace for OpenDataHub if it does not already exist:
-   ```
-   oc create ns opendatahub
-   ```
-2. Apply the OpenDataHub operator subscription:
-   ```
-   oc create -f manifests/opendatahub.yaml
-   ```
-3. Wait for the OpenDataHub operator subscription to be ready:
-   ```
-   oc wait -n openshift-operators subscription/opendatahub-operator --for=jsonpath='{.status.state}'=AtLatestKnown --timeout=180s
-   ```
+1. **Create the Namespace**: Ensure the namespace for the Red Hat OpenShift Data Science operator exists:
 
-  
-redhat-ods-monitoring-core-resource-limits
-redhat-ods-monitoring
-redhat-ods-applications-core-resource-limits
-redhat-ods-applications
-rhods-notebooks-core-resource-limits
-rhods-notebooks
+    ```sh
+    oc create ns redhat-ods-operator
+    ```
 
+2. **Apply the Operator Subscription**: Apply the subscription YAML to subscribe to the operator:
 
+    ```sh
+    oc create -f manifests/rhods.yaml
+    ```
 
+3. **Wait for the Subscription to be Ready**: Wait until the operator subscription is fully ready:
 
-.PHONY: install-nfd-operator
-install-nfd-operator: ## Install NFD operator ( Node Feature Discovery )
-	@echo -e "\n==> Installing NFD Operator \n"
-	-oc create ns openshift-nfd
-	oc create -f contrib/configuration/nfd-operator-subscription.yaml
-	@echo -e "\n==> Creating default NodeFeatureDiscovery CR \n"
-	@while [[ -z $$(oc get customresourcedefinition nodefeaturediscoveries.nfd.openshift.io) ]]; do echo "."; sleep 10; done
-	@while [[ -z $$(oc get csv -n openshift-nfd --selector operators.coreos.com/nfd.openshift-nfd) ]]; do echo "."; sleep 10; done
-	oc get csv -n openshift-nfd --selector operators.coreos.com/nfd.openshift-nfd -ojsonpath={.items[0].metadata.annotations.alm-examples} | jq '.[] | select(.kind=="NodeFeatureDiscovery")' | oc apply -f -
+    ```sh
+    oc wait -n openshift-operators subscription/rhods-operator --for=jsonpath='{.status.state}'=AtLatestKnown --timeout=180s
+    ```
 
+    This concludes the installation of the Red Hat OpenShift Data Science Operator.
 
-.PHONY: install-nvidia-operator
-install-nvidia-operator: ## Install nvidia operator
-	@echo -e "\n==> Installing nvidia Operator \n"
-	-oc create ns nvidia-gpu-operator
-	oc create -f contrib/configuration/nvidia-operator-subscription.yaml
-	@echo -e "\n==> Creating default ClusterPolicy CR \n"
-	@while [[ -z $$(oc get customresourcedefinition clusterpolicies.nvidia.com) ]]; do echo "."; sleep 10; done
-	@while [[ -z $$(oc get csv -n nvidia-gpu-operator --selector operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator) ]]; do echo "."; sleep 10; done
-	oc get csv -n nvidia-gpu-operator --selector operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator -ojsonpath={.items[0].metadata.annotations.alm-examples} | jq .[] | oc apply -f -
+## Checking and Deleting Specified Limit Ranges
 
+Certain limit ranges might interfere with the proper operation of Red Hat OpenShift Data Science. To check for and delete these limit ranges, follow these steps:
 
-##@ general
-.PHONY: install-opendatahub-operator
-install-opendatahub-operator: ## Install OpenDataHub operator
-	@echo -e "\n==> Installing OpenDataHub Operator \n"
-	-oc create ns opendatahub
-	oc create -f contrib/configuration/opendatahub-operator-subscription.yaml
-	@echo Waiting for opendatahub-operator Subscription to be ready
-	oc wait -n openshift-operators subscription/opendatahub-operator --for=jsonpath='{.status.state}'=AtLatestKnown --timeout=180s
+1. **Define Limit Ranges to Check and Delete**: Identify the limit ranges that may need to be deleted:
+
+    - `redhat-ods-monitoring-core-resource-limits` in namespace `redhat-ods-monitoring`
+    - `redhat-ods-applications-core-resource-limits` in namespace `redhat-ods-applications`
+    - `rhods-notebooks-core-resource-limits` in namespace `rhods-notebooks`
+
+2. **Check and Delete Limit Ranges**:
+
+    Use the following commands to check for each limit range and delete it if found:
+
+    ```sh
+    # Check and delete limit range in redhat-ods-monitoring
+    if oc get limitrange redhat-ods-monitoring-core-resource-limits -n redhat-ods-monitoring &> /dev/null; then
+        oc delete limitrange redhat-ods-monitoring-core-resource-limits -n redhat-ods-monitoring
+    fi
+
+    # Check and delete limit range in redhat-ods-applications
+    if oc get limitrange redhat-ods-applications-core-resource-limits -n redhat-ods-applications &> /dev/null; then
+        oc delete limitrange redhat-ods-applications-core-resource-limits -n redhat-ods-applications
+    fi
+
+    # Check and delete limit range in rhods-notebooks
+    if oc get limitrange rhods-notebooks-core-resource-limits -n rhods-notebooks &> /dev/null; then
+        oc delete limitrange rhods-notebooks-core-resource-limits -n rhods-notebooks
+    fi
+    ```
+
+This process ensures that any limit ranges that could interfere with Red Hat OpenShift Data Science are removed.
